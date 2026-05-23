@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Setter IA — Jonathan Van Veen × OpenClaw</title>
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#F7F6F2;--surface:#FFFFFF;--s2:#F2F1ED;--s3:#ECEAE4;
+  --border:#E4E2DA;--border2:#CCCAC0;
+  --text:#1A1916;--t2:#5C5A54;--t3:#9B9890;
+  --green:#2D5C3F;--green-l:#EAF0EC;--green-m:#4A8C62;--green-b:#B8D4C0;
+  --blue:#1A3A5C;--blue-l:#E8EFF5;--blue-b:#AABFD4;
+  --amber:#7A4F1A;--amber-l:#F5EDE0;--amber-b:#D4A870;
+  --red:#6B1F1F;--red-l:#F5E8E8;--red-b:#D4A0A0;
+  --purple:#3B2D5C;--purple-l:#EEEBF5;--purple-b:#B8AEDC;
+  --r:4px;--r2:8px;--r3:12px;
+}
+body{font-family:var(--font-sans);background:var(--bg);color:var(--text);min-height:100vh;overflow:hidden;font-size:13px}
+
+/* ── NAV ── */
+.nav{height:50px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;background:var(--surface);border-bottom:1px solid var(--border);position:fixed;top:0;left:0;right:0;z-index:50}
+.nav-brand{display:flex;align-items:center;gap:14px}
+.nav-mark{font-family:var(--font-serif);font-size:16px;letter-spacing:-.02em}
+.nav-mark em{font-style:italic;color:var(--green)}
+.nav-sep{width:1px;height:14px;background:var(--border)}
+.nav-client{font-size:12px;color:var(--t3);font-weight:300}
+.nav-right{display:flex;align-items:center;gap:10px}
+.nav-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:blink 2.5s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.nav-status{font-size:11px;color:var(--t3)}
+.nav-badge{font-size:11px;padding:3px 10px;border-radius:20px;border:1px solid var(--border);color:var(--t2);background:var(--s2)}
+
+/* ── TABS ── */
+.tabs{position:fixed;top:50px;left:0;right:0;z-index:40;display:flex;background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px}
+.tab{padding:11px 18px;font-size:12px;cursor:pointer;border-bottom:2px solid transparent;color:var(--t3);transition:all .15s;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.tab.active{color:var(--text);border-bottom-color:var(--green)}
+.tab:hover:not(.active){color:var(--t2)}
+.tab-dot{width:5px;height:5px;border-radius:50%}
+
+/* ── LAYOUT ── */
+.app{display:grid;grid-template-columns:1fr 300px;height:calc(100vh - 90px);margin-top:90px;overflow:hidden}
+
+/* ── PANELS ── */
+.panel-view{display:none;height:100%;overflow:hidden}
+.panel-view.active{display:flex;flex-direction:column}
+
+/* ── SCENARIO BAR ── */
+.sc-bar{display:flex;align-items:center;gap:6px;padding:10px 20px;background:var(--surface);border-bottom:1px solid var(--border);flex-wrap:wrap;flex-shrink:0}
+.sc-lbl{font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.08em;margin-right:2px;flex-shrink:0}
+.sc-btn{font-size:11px;padding:4px 11px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--t2);cursor:pointer;font-family:var(--font-sans);transition:all .15s;white-space:nowrap}
+.sc-btn:hover{border-color:var(--border2);color:var(--text)}
+.sc-btn.active{border-color:var(--green);color:var(--green);background:var(--green-l)}
+
+/* ── CHAT ── */
+.chat-wrap{display:flex;height:100%;overflow:hidden}
+.chat-col{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.chat-hdr{display:flex;align-items:center;gap:11px;padding:11px 18px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0}
+.av{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;letter-spacing:.03em;flex-shrink:0;border:1px solid var(--border)}
+.av-wa{background:var(--green-l);color:var(--green)}
+.av-ig{background:var(--purple-l);color:var(--purple)}
+.av-li{background:var(--blue-l);color:var(--blue)}
+.hdr-name{font-size:13px;font-weight:500}
+.hdr-sub{font-size:11px;color:var(--t3);display:flex;align-items:center;gap:4px;margin-top:1px}
+.live-dot{width:4px;height:4px;border-radius:50%;background:var(--green)}
+.hdr-channel{margin-left:auto;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:500;text-transform:uppercase;letter-spacing:.04em}
+.ch-wa{background:var(--green-l);color:var(--green)}
+.ch-ig{background:var(--purple-l);color:var(--purple)}
+.ch-li{background:var(--blue-l);color:var(--blue)}
+.hdr-btns{display:flex;gap:3px;margin-left:8px}
+.hdr-btn{width:26px;height:26px;border-radius:var(--r2);border:none;background:transparent;cursor:pointer;color:var(--t3);font-size:13px;display:flex;align-items:center;justify-content:center}
+.hdr-btn:hover{background:var(--s2);color:var(--text)}
+
+.trigger-bar{padding:8px 18px;background:var(--amber-l);border-bottom:1px solid var(--amber-b);font-size:11px;color:var(--amber);display:flex;align-items:center;gap:6px;flex-shrink:0;display:none}
+.trigger-bar.show{display:flex}
+.trigger-pill{font-size:10px;font-weight:500;padding:2px 7px;border-radius:3px;background:var(--amber);color:#fff;text-transform:uppercase;letter-spacing:.04em;flex-shrink:0}
+
+.chat-body{flex:1;overflow-y:auto;padding:14px 18px;display:flex;flex-direction:column;gap:9px;background:var(--bg)}
+.chat-body::-webkit-scrollbar{width:3px}
+.chat-body::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+.bubble{max-width:78%;font-size:12.5px;line-height:1.65;position:relative;padding:9px 13px;border-radius:var(--r2)}
+.bubble.bot{background:var(--surface);border:1px solid var(--border);border-radius:2px 10px 10px 10px;align-self:flex-start;color:var(--text)}
+.bubble.user{background:var(--green);border-radius:10px 2px 10px 10px;align-self:flex-end;color:#fff}
+.bubble.sys{background:var(--s2);border:1px solid var(--border);align-self:center;color:var(--t2);font-size:11px;padding:5px 12px;border-radius:20px;font-style:italic;max-width:90%;text-align:center}
+.btime{font-size:10px;color:var(--t3);margin-top:5px;text-align:right;font-family:var(--font-mono)}
+.bubble.user .btime{color:rgba(255,255,255,.45)}
+.btag{font-size:10px;margin-bottom:5px;display:flex;align-items:center;gap:4px;text-transform:uppercase;letter-spacing:.04em;font-weight:500}
+.btag-w{color:var(--green)}
+.btag-tts{color:var(--purple)}
+
+.typing{display:flex;gap:3px;align-items:center;padding:3px 0}
+.typing span{width:5px;height:5px;border-radius:50%;background:var(--t3);animation:tp 1.2s infinite}
+.typing span:nth-child(2){animation-delay:.2s}
+.typing span:nth-child(3){animation-delay:.4s}
+@keyframes tp{0%,60%,100%{transform:translateY(0);opacity:.3}30%{transform:translateY(-4px);opacity:1}}
+
+.audio-bub{display:flex;align-items:center;gap:9px;min-width:160px;padding:8px 13px}
+.play-ico{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0;border:1px solid}
+.bot .play-ico{border-color:var(--border2);color:var(--t2)}
+.user .play-ico{border-color:rgba(255,255,255,.4);color:rgba(255,255,255,.8)}
+.wave{display:flex;gap:2px;align-items:center;height:16px;flex:1}
+.wave span{width:2px;border-radius:1px;animation:wv 1s ease-in-out infinite}
+.bot .wave span{background:var(--border2)}
+.user .wave span{background:rgba(255,255,255,.5)}
+.wave span:nth-child(2n){animation-delay:.15s}
+.wave span:nth-child(3n){animation-delay:.3s}
+@keyframes wv{0%,100%{height:3px}50%{height:13px}}
+.adur{font-size:10px;font-family:var(--font-mono);flex-shrink:0}
+.bot .adur{color:var(--t3)}
+.user .adur{color:rgba(255,255,255,.5)}
+
+.rdv-card{margin-top:8px;padding:10px 12px;background:var(--green-l);border:1px solid var(--green-b);border-radius:var(--r2)}
+.rdv-ttl{font-size:10px;font-weight:500;color:var(--green);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px}
+.rdv-row{font-size:12px;color:var(--green);margin:2px 0;opacity:.85}
+
+.asset-card{margin-top:8px;padding:10px 12px;background:var(--blue-l);border:1px solid var(--blue-b);border-radius:var(--r2)}
+.asset-ttl{font-size:10px;font-weight:500;color:var(--blue);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px}
+.asset-row{font-size:12px;color:var(--blue);margin:2px 0;opacity:.85}
+
+.qr-area{padding:8px 18px 0;background:var(--surface);border-top:1px solid var(--border);display:flex;flex-wrap:wrap;gap:5px;flex-shrink:0}
+.qr{font-size:11px;padding:5px 11px;border-radius:20px;border:1px solid var(--border2);color:var(--t2);background:var(--surface);cursor:pointer;font-family:var(--font-sans);transition:all .15s}
+.qr:hover{border-color:var(--green);color:var(--green);background:var(--green-l)}
+
+.chat-inp{display:flex;gap:7px;padding:11px 18px;background:var(--surface);border-top:1px solid var(--border);flex-shrink:0}
+.cinp{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:7px 15px;font-size:12px;color:var(--text);outline:none;font-family:var(--font-sans)}
+.cinp:focus{border-color:var(--border2)}
+.cinp::placeholder{color:var(--t3)}
+.sbtn{width:32px;height:32px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0}
+.sbtn-send{background:var(--green);color:#fff}
+.sbtn-mic{background:var(--s2);border:1px solid var(--border);color:var(--t2)}
+.sbtn-mic:hover{border-color:var(--green);color:var(--green);background:var(--green-l)}
+
+/* ── RIGHT PANEL ── */
+.right{border-left:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;overflow:hidden}
+.r-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
+.r-tab{flex:1;padding:9px 4px;font-size:11px;cursor:pointer;border-bottom:2px solid transparent;color:var(--t3);text-align:center;transition:all .15s}
+.r-tab.active{color:var(--text);border-bottom-color:var(--green)}
+.r-tab:hover:not(.active){color:var(--t2)}
+.r-body{flex:1;overflow-y:auto;padding:16px}
+.r-body::-webkit-scrollbar{width:3px}
+.r-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.r-sec{margin-bottom:18px}
+.r-ttl{font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:11px;font-weight:500}
+
+/* Score */
+.srow{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.slbl{font-size:11px;color:var(--t2);width:82px;flex-shrink:0}
+.sbg{flex:1;height:4px;background:var(--s3);border-radius:2px;overflow:hidden}
+.sfill{height:100%;border-radius:2px;transition:width .7s cubic-bezier(.4,0,.2,1)}
+.snum{font-size:10px;font-family:var(--font-mono);color:var(--t2);width:24px;text-align:right}
+.stage{display:inline-flex;align-items:center;gap:5px;margin-top:5px;padding:4px 10px;border-radius:var(--r);font-size:11px;font-weight:500;letter-spacing:.03em}
+.st-w{background:var(--s2);color:var(--t3)}
+.st-q{background:var(--blue-l);color:var(--blue)}
+.st-h{background:var(--green-l);color:var(--green)}
+.st-r{background:var(--purple-l);color:var(--purple)}
+.st-f{background:var(--amber-l);color:var(--amber)}
+.st-o{background:var(--red-l);color:var(--red)}
+
+/* Stats */
+.sgrid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.scard{background:var(--bg);border-radius:var(--r2);padding:10px 12px}
+.scard-n{font-family:var(--font-serif);font-size:20px;line-height:1}
+.scard-l{font-size:10px;color:var(--t3);margin-top:2px}
+.scard-d{font-size:10px;color:var(--green);margin-top:2px}
+
+/* Leads */
+.lead{display:flex;align-items:center;gap:9px;padding:8px 0;border-bottom:1px solid var(--border)}
+.lead:last-child{border-bottom:none}
+.lav{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:500;flex-shrink:0;letter-spacing:.03em}
+.lname{font-size:12px;font-weight:500}
+.lsub{font-size:10px;color:var(--t3)}
+.ltag{margin-left:auto;font-size:9px;padding:2px 7px;border-radius:3px;font-weight:500;text-transform:uppercase;letter-spacing:.04em;flex-shrink:0}
+
+/* Follow-ups */
+.fu{display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)}
+.fu:last-child{border-bottom:none}
+.ficon{width:20px;height:20px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;margin-top:1px}
+.ftxt{font-size:11px;color:var(--t2);flex:1;line-height:1.4}
+.fwhen{font-size:10px;color:var(--t3);font-family:var(--font-mono);flex-shrink:0;margin-top:1px}
+
+/* Log */
+.logline{font-size:10px;padding:3px 0;border-bottom:1px solid var(--border);display:flex;gap:7px}
+.logline:last-child{border-bottom:none}
+.logt{font-family:var(--font-mono);color:var(--t3);flex-shrink:0}
+.logev{color:var(--t2)}
+.lg{color:var(--green)}
+.lb{color:var(--blue)}
+.lp{color:var(--purple)}
+.la{color:var(--amber)}
+
+/* ── ARCHITECTURE VIEW ── */
+.arch-view{padding:20px;overflow-y:auto;height:100%;background:var(--bg)}
+.arch-title{font-family:var(--font-serif);font-size:22px;margin-bottom:4px}
+.arch-sub{font-size:12px;color:var(--t2);margin-bottom:24px;font-weight:300}
+.arch-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px}
+.arch-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r3);padding:14px 16px}
+.arch-head{font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;font-weight:500;display:flex;align-items:center;gap:6px}
+.arch-head-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.arch-item{display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)}
+.arch-item:last-child{border-bottom:none}
+.arch-logo{width:24px;height:24px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:500;flex-shrink:0}
+.arch-iname{font-size:12px;font-weight:500;color:var(--text)}
+.arch-irole{font-size:11px;color:var(--t3);margin-top:1px}
+.arch-why{font-size:11px;color:var(--t2);margin-top:2px;font-style:italic}
+.arch-flow{background:var(--surface);border:1px solid var(--border);border-radius:var(--r3);padding:16px;margin-bottom:12px}
+.arch-flow-title{font-size:12px;font-weight:500;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.flow-steps{display:flex;align-items:stretch;gap:0;overflow-x:auto}
+.flow-step{display:flex;align-items:center;gap:0;flex-shrink:0}
+.fstep-box{padding:8px 12px;border:1px solid var(--border);border-radius:var(--r2);font-size:11px;color:var(--t2);background:var(--bg);text-align:center;min-width:90px}
+.fstep-box strong{display:block;font-size:10px;font-weight:500;color:var(--text);margin-bottom:2px;text-transform:uppercase;letter-spacing:.04em}
+.fstep-arr{color:var(--t3);font-size:12px;margin:0 4px;flex-shrink:0}
+.fstep-box.highlight{border-color:var(--green-b);background:var(--green-l)}
+.fstep-box.highlight strong{color:var(--green)}
+.arch-cost{background:var(--surface);border:1px solid var(--border);border-radius:var(--r3);padding:16px}
+.cost-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px}
+.cost-item{background:var(--bg);border-radius:var(--r2);padding:10px 12px}
+.cost-n{font-family:var(--font-serif);font-size:18px}
+.cost-l{font-size:10px;color:var(--t3);margin-top:2px}
+.cost-d{font-size:10px;color:var(--green);margin-top:2px}
+
+/* ── MODAL ── */
+.modal-bd{display:none;position:fixed;inset:0;background:rgba(247,246,242,.88);z-index:200;align-items:center;justify-content:center;backdrop-filter:blur(2px)}
+.modal-bd.show{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--r3);padding:30px;width:290px;text-align:center}
+.modal-title{font-family:var(--font-serif);font-size:17px;margin-bottom:5px}
+.modal-sub{font-size:11px;color:var(--t3);margin-bottom:22px;font-weight:300}
+.modal-ring{width:58px;height:58px;border-radius:50%;background:var(--green-l);border:1px solid var(--green-b);display:flex;align-items:center;justify-content:center;margin:0 auto 18px;font-size:22px;animation:ring 2s ease-in-out infinite}
+@keyframes ring{0%,100%{box-shadow:0 0 0 0 rgba(45,92,63,.15)}65%{box-shadow:0 0 0 10px rgba(45,92,63,0)}}
+.modal-prog{font-size:11px;color:var(--t2);min-height:16px;font-style:italic}
+.modal-steps{text-align:left;margin:14px 0 0}
+.mstep{font-size:11px;padding:3px 0;color:var(--t3);display:flex;align-items:center;gap:6px}
+.mstep.done{color:var(--green)}
+.mstep.active{color:var(--text)}
+.mstep-dot{width:5px;height:5px;border-radius:50%;background:var(--border2);flex-shrink:0}
+.mstep.done .mstep-dot{background:var(--green)}
+.mstep.active .mstep-dot{background:var(--amber);animation:blink 1s infinite}
+.mclose{margin-top:18px;font-size:11px;padding:6px 14px;border-radius:var(--r2);border:1px solid var(--border);background:transparent;cursor:pointer;font-family:var(--font-sans);color:var(--t2)}
+.mclose:hover{background:var(--s2)}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<div class="nav">
+  <div class="nav-brand">
+    <div class="nav-mark">Setter <em>IA</em></div>
+    <div class="nav-sep"></div>
+    <span class="nav-client">Jonathan Van Veen × OpenClaw</span>
+  </div>
+  <div class="nav-right">
+    <div class="nav-dot"></div>
+    <span class="nav-status">Système actif</span>
+    <div class="nav-badge">Démo v2 — Confidentiel</div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <div class="tab active" onclick="showTab('demo')"><span class="tab-dot" style="background:var(--green)"></span>Démonstration live</div>
+  <div class="tab" onclick="showTab('arch')"><span class="tab-dot" style="background:var(--blue)"></span>Architecture technique</div>
+</div>
+
+<!-- VOICE MODAL -->
+<div class="modal-bd" id="voiceModal">
+  <div class="modal">
+    <div class="modal-title">Audio reçu</div>
+    <div class="modal-sub">Pipeline vocal OpenClaw</div>
+    <div class="modal-ring">&#127908;</div>
+    <div class="modal-prog" id="modalProg"></div>
+    <div class="modal-steps" id="modalSteps"></div>
+    <button class="mclose" onclick="closeModal()">Fermer</button>
+  </div>
+</div>
+
+<!-- DEMO TAB -->
+<div id="tab-demo" class="app">
+  <div style="display:flex;flex-direction:column;height:100%;overflow:hidden;border-right:1px solid var(--border)">
+
+    <!-- SCENARIO BAR -->
+    <div class="sc-bar">
+      <span class="sc-lbl">Scénario</span>
+      <button class="sc-btn active" id="sc0" onclick="loadSc(0)">WhatsApp — Prospect chaud</button>
+      <button class="sc-btn" id="sc1" onclick="loadSc(1)">WhatsApp — Prospect froid</button>
+      <button class="sc-btn" id="sc2" onclick="loadSc(2)">WhatsApp — Objection prix</button>
+      <button class="sc-btn" id="sc3" onclick="loadSc(3)">WhatsApp — Disparaît</button>
+      <button class="sc-btn" id="sc4" onclick="loadSc(4)">WhatsApp — Agressif</button>
+      <button class="sc-btn" id="sc5" onclick="loadSc(5)">Instagram — DM commentaire</button>
+      <button class="sc-btn" id="sc6" onclick="loadSc(6)">Instagram — Concurrent</button>
+      <button class="sc-btn" id="sc7" onclick="loadSc(7)">LinkedIn — DM entrant</button>
+    </div>
+
+    <!-- CHAT HEADER -->
+    <div class="chat-hdr" id="chatHdr">
+      <div class="av av-wa" id="chatAv">TM</div>
+      <div>
+        <div class="hdr-name" id="chatName">Thomas Martin</div>
+        <div class="hdr-sub"><div class="live-dot"></div><span id="chatStatus">En ligne</span></div>
+      </div>
+      <span class="hdr-channel ch-wa" id="chatChannel">WhatsApp</span>
+      <div class="hdr-btns">
+        <button class="hdr-btn">&#128222;</button>
+        <button class="hdr-btn">&#8505;</button>
+      </div>
+    </div>
+
+    <!-- TRIGGER BAR -->
+    <div class="trigger-bar" id="triggerBar">
+      <span class="trigger-pill" id="triggerPill">Déclencheur</span>
+      <span id="triggerText"></span>
+    </div>
+
+    <!-- CHAT BODY -->
+    <div class="chat-body" id="chatBody"></div>
+    <div class="qr-area" id="qrArea"></div>
+
+    <div class="chat-inp">
+      <button class="sbtn sbtn-mic" onclick="sendAudio()" title="Simuler un message vocal">&#127908;</button>
+      <input class="cinp" id="userInp" placeholder="Écrire un message..." onkeydown="if(event.key==='Enter')sendUser()">
+      <button class="sbtn sbtn-send" onclick="sendUser()">&#10148;</button>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="right">
+    <div class="r-tabs">
+      <div class="r-tab active" id="rt0" onclick="showRTab(0)">Scoring</div>
+      <div class="r-tab" id="rt1" onclick="showRTab(1)">Pipeline</div>
+      <div class="r-tab" id="rt2" onclick="showRTab(2)">Journal</div>
+    </div>
+    <div class="r-body">
+
+      <!-- SCORING -->
+      <div id="rp0">
+        <div class="r-sec">
+          <div class="r-ttl">Analyse OpenClaw</div>
+          <div class="srow"><span class="slbl">Qualification</span><div class="sbg"><div class="sfill" id="bQ" style="width:0%;background:var(--blue)"></div></div><span class="snum" id="vQ">0%</span></div>
+          <div class="srow"><span class="slbl">Sérieux</span><div class="sbg"><div class="sfill" id="bS" style="width:0%;background:var(--green)"></div></div><span class="snum" id="vS">0%</span></div>
+          <div class="srow"><span class="slbl">Budget</span><div class="sbg"><div class="sfill" id="bB" style="width:0%;background:var(--amber)"></div></div><span class="snum" id="vB">0%</span></div>
+          <div class="srow"><span class="slbl">Urgence</span><div class="sbg"><div class="sfill" id="bU" style="width:0%;background:var(--red)"></div></div><span class="snum" id="vU">0%</span></div>
+          <div class="stage st-w" id="stageTag">En attente</div>
+        </div>
+        <div class="r-sec">
+          <div class="r-ttl">Stats session</div>
+          <div class="sgrid">
+            <div class="scard"><div class="scard-n" id="stLeads">0</div><div class="scard-l">Leads traités</div></div>
+            <div class="scard"><div class="scard-n" id="stRdv">0</div><div class="scard-l">RDV posés</div><div class="scard-d" id="stRate">—</div></div>
+            <div class="scard"><div class="scard-n">10j</div><div class="scard-l">Relance auto</div><div class="scard-d">0 lead perdu</div></div>
+            <div class="scard"><div class="scard-n">0,03€</div><div class="scard-l">Coût / prospect</div></div>
+          </div>
+        </div>
+        <div class="r-sec">
+          <div class="r-ttl">Relances planifiées</div>
+          <div class="fu"><div class="ficon" style="background:var(--green-l);color:var(--green)">WA</div><span class="ftxt">Relance Marc L.</span><span class="fwhen">2h</span></div>
+          <div class="fu"><div class="ficon" style="background:var(--purple-l);color:var(--purple)">IG</div><span class="ftxt">Nurturing Emma P.</span><span class="fwhen">Dem. 9h</span></div>
+          <div class="fu"><div class="ficon" style="background:var(--blue-l);color:var(--blue)">LI</div><span class="ftxt">Follow-up David R.</span><span class="fwhen">Ven. 10h</span></div>
+          <div class="fu"><div class="ficon" style="background:var(--amber-l);color:var(--amber)">WA</div><span class="ftxt">Rappel RDV Karim A.</span><span class="fwhen">Ven. 8h</span></div>
+        </div>
+      </div>
+
+      <!-- PIPELINE -->
+      <div id="rp1" style="display:none">
+        <div class="r-sec">
+          <div class="r-ttl">Prospects actifs</div>
+          <div class="lead"><div class="lav" style="background:var(--green-l);color:var(--green)">KA</div><div><div class="lname">Karim A.</div><div class="lsub">Formations — 800€/mois</div></div><span class="ltag" style="background:var(--green-l);color:var(--green)">RDV ven.</span></div>
+          <div class="lead"><div class="lav" style="background:var(--blue-l);color:var(--blue)">SO</div><div><div class="lname">Sophie O.</div><div class="lsub">Coach bien-être</div></div><span class="ltag" style="background:var(--blue-l);color:var(--blue)">Chaud</span></div>
+          <div class="lead"><div class="lav" style="background:var(--amber-l);color:var(--amber)">ML</div><div><div class="lname">Marc L.</div><div class="lsub">Consultant RH</div></div><span class="ltag" style="background:var(--amber-l);color:var(--amber)">J+5</span></div>
+          <div class="lead"><div class="lav" style="background:var(--purple-l);color:var(--purple)">DR</div><div><div class="lname">David R.</div><div class="lsub">CEO startup — LinkedIn</div></div><span class="ltag" style="background:var(--purple-l);color:var(--purple)">Qualif.</span></div>
+          <div class="lead" id="dynLead" style="display:none"><div class="lav av-wa" id="dynAv">TM</div><div><div class="lname" id="dynName">Thomas M.</div><div class="lsub" id="dynSub">En cours</div></div><span class="ltag" id="dynTag" style="background:var(--blue-l);color:var(--blue)">Live</span></div>
+        </div>
+      </div>
+
+      <!-- JOURNAL -->
+      <div id="rp2" style="display:none">
+        <div class="r-ttl">Journal OpenClaw</div>
+        <div id="logPanel"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ARCH TAB -->
+<div id="tab-arch" style="display:none;height:calc(100vh - 90px);overflow:hidden">
+  <div class="arch-view">
+    <div class="arch-title">Architecture technique</div>
+    <div class="arch-sub">Stack sélectionné pour Jonathan Van Veen — setter IA WhatsApp · Instagram · LinkedIn</div>
+
+    <div class="arch-grid">
+      <div class="arch-card">
+        <div class="arch-head"><div class="arch-head-dot" style="background:var(--blue)"></div>Canaux d'entrée</div>
+        <div class="arch-item"><div class="arch-logo" style="background:var(--green-l);color:var(--green)">WA</div><div><div class="arch-iname">360dialog</div><div class="arch-irole">WhatsApp Business API</div><div class="arch-why">Meilleur taux de délivrabilité EU, webhook temps réel</div></div></div>
+        <div class="arch-item"><div class="arch-logo" style="background:var(--purple-l);color:var(--purple)">IG</div><div><div class="arch-iname">Meta Graph API</div><div class="arch-irole">Instagram DM + commentaires</div><div class="arch-why">Détection commentaires, likes, follows → DM immédiat</div></div></div>
+        <div class="arch-item"><div class="arch-logo" style="background:var(--blue-l);color:var(--blue)">LI</div><div><div class="arch-iname">Unipile API</div><div class="arch-irole">LinkedIn DM</div><div class="arch-why">Seule API fiable anti-ban pour LinkedIn automation</div></div></div>
+      </div>
+      <div class="arch-card">
+        <div class="arch-head"><div class="arch-head-dot" style="background:var(--green)"></div>Cerveau IA</div>
+        <div class="arch-item"><div class="arch-logo" style="background:#FDF0E8;color:#D97706">AI</div><div><div class="arch-iname">Claude Sonnet</div><div class="arch-irole">Anthropic API</div><div class="arch-why">Meilleur français naturel, gestion objections, contexte long</div></div></div>
+        <div class="arch-item"><div class="arch-logo" style="background:var(--green-l);color:var(--green)">OC</div><div><div class="arch-iname">OpenClaw</div><div class="arch-irole">Infrastructure agents</div><div class="arch-why">SOUL.md, contexte par session, routing multi-agent</div></div></div>
+        <div class="arch-item"><div class="arch-logo" style="background:var(--s2);color:var(--t2)">n8n</div><div><div class="arch-iname">n8n self-hosted</div><div class="arch-irole">Orchestration</div><div class="arch-why">Routing webhooks, crons, conditions, intégrations</div></div></div>
+      </div>
+      <div class="arch-card">
+        <div class="arch-head"><div class="arch-head-dot" style="background:var(--purple)"></div>Couche vocale</div>
+        <div class="arch-item"><div class="arch-logo" style="background:var(--s2);color:var(--t2)">W</div><div><div class="arch-iname">Whisper (OpenAI)</div><div class="arch-irole">Transcription audio entrant</div><div class="arch-why">Voice note → texte en 2s, toutes langues</div></div></div>
+        <div class="arch-item"><div class="arch-logo" style="background:var(--amber-l);color:var(--amber)">EL</div><div><div class="arch-iname">ElevenLabs</div><div class="arch-irole">Clone vocal Jonathan</div><div class="arch-why">5 min d'enregistrement → voix identique pour les réponses</div></div></div>
+      </div>
+      <div class="arch-card">
+        <div class="arch-head"><div class="arch-head-dot" style="background:var(--amber)"></div>Actions & CRM</div>
+        <div class="arch-item"><div class="arch-logo" style="background:#E8F5F0;color:#0F7B5B">Ca</div><div><div class="arch-iname">Calendly API v2</div><div class="arch-irole">Prise de RDV automatique</div><div class="arch-why">Vérif dispo, création slot, lien personnalisé</div></div></div>
+        <div class="arch-item"><div class="arch-logo" style="background:var(--blue-l);color:var(--blue)">AT</div><div><div class="arch-iname">Airtable</div><div class="arch-irole">CRM léger + dashboard</div><div class="arch-why">Historique leads, scoring, statuts, vue Jonathan</div></div></div>
+      </div>
+      <div class="arch-card">
+        <div class="arch-head"><div class="arch-head-dot" style="background:var(--amber)"></div>Séquences follow-up</div>
+        <div class="arch-item"><div class="arch-logo" style="background:var(--s2);color:var(--t2)">CR</div><div><div class="arch-iname">n8n Cron nodes</div><div class="arch-irole">J+1, J+3, J+5, J+7, J+10</div><div class="arch-why">Relance par canal, message contextuel, auto-stop si réponse</div></div></div>
+        <div class="arch-item"><div class="arch-logo" style="background:var(--green-l);color:var(--green)">VA</div><div><div class="arch-iname">Value assets</div><div class="arch-irole">Contenus de nurturing</div><div class="arch-why">PDF, liens, audios selon stade de maturité du prospect</div></div></div>
+      </div>
+      <div class="arch-card">
+        <div class="arch-head"><div class="arch-head-dot" style="background:var(--red)"></div>Vision SaaS</div>
+        <div class="arch-item"><div class="arch-logo" style="background:var(--red-l);color:var(--red)">S</div><div><div class="arch-iname">Architecture multi-tenant</div><div class="arch-irole">1 stack → N clients</div><div class="arch-why">Même infra, SOUL.md par client, billing Stripe</div></div></div>
+        <div class="arch-item"><div class="arch-logo" style="background:var(--amber-l);color:var(--amber)">79€</div><div><div class="arch-iname">Abonnement mensuel</div><div class="arch-irole">3 formules prévues</div><div class="arch-why">Starter · Pro · Agency — crédits API inclus</div></div></div>
+      </div>
+    </div>
+
+    <div class="arch-flow">
+      <div class="arch-flow-title">&#8594; Flux WhatsApp complet</div>
+      <div class="flow-steps">
+        <div class="flow-step"><div class="fstep-box"><strong>Prospect</strong>Écrit ou envoie un audio</div><div class="fstep-arr">›</div></div>
+        <div class="flow-step"><div class="fstep-box"><strong>360dialog</strong>Webhook → n8n</div><div class="fstep-arr">›</div></div>
+        <div class="flow-step"><div class="fstep-box highlight"><strong>OpenClaw</strong>Analyse + routing</div><div class="fstep-arr">›</div></div>
+        <div class="flow-step"><div class="fstep-box highlight"><strong>Claude</strong>Génère la réponse</div><div class="fstep-arr">›</div></div>
+        <div class="flow-step"><div class="fstep-box"><strong>ElevenLabs</strong>TTS si audio sortant</div><div class="fstep-arr">›</div></div>
+        <div class="flow-step"><div class="fstep-box"><strong>Calendly</strong>RDV si prospect chaud</div><div class="fstep-arr">›</div></div>
+        <div class="flow-step"><div class="fstep-box"><strong>Airtable</strong>Log + scoring</div></div>
+      </div>
+    </div>
+
+    <div class="arch-cost">
+      <div class="r-ttl" style="margin-bottom:11px">Coût mensuel infrastructure estimé</div>
+      <div class="cost-grid">
+        <div class="cost-item"><div class="cost-n">~5€</div><div class="cost-l">VPS Hetzner</div><div class="cost-d">OpenClaw + n8n</div></div>
+        <div class="cost-item"><div class="cost-n">~20€</div><div class="cost-l">API Anthropic</div><div class="cost-d">Claude Sonnet</div></div>
+        <div class="cost-item"><div class="cost-n">~5€</div><div class="cost-l">ElevenLabs</div><div class="cost-d">Clone vocal</div></div>
+        <div class="cost-item"><div class="cost-n">~35€</div><div class="cost-l">Total / mois</div><div class="cost-d">Centaines de leads</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const T=()=>{const d=new Date();return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0')+':'+d.getSeconds().toString().padStart(2,'0')};
+let logs=[],step=0,curSc=0,leads=0,rdv=0,rTab=0;
+
+const SC=[
+  // 0 WA chaud
+  {name:'Thomas Martin',av:'TM',avcls:'av-wa',ch:'WhatsApp',chcls:'ch-wa',trigger:false,
+   steps:[
+    {f:'bot',t:"Bonjour Thomas ! Je suis l'assistant de Jonathan. Tu as écrit via son lien bio. Tu travailles dans quel domaine en ce moment ?",sc:[20,10,5,5],st:'st-q',stxt:'Qualification'},
+    {f:'user',t:"Je coache des entrepreneurs mais j'ai du mal à dépasser 2k/mois"},
+    {f:'bot',t:"Tu travailles seul ou tu as une équipe ? Et tu es à combien de clients actifs là ?",sc:[50,40,30,20],st:'st-q',stxt:'Qualification'},
+    {f:'user',t:"Seul. 3-4 clients à 500€ en ce moment"},
+    {f:'bot',t:"Donc autour de 2 000€/mois. Jonathan a une méthode pour passer de 2k à 6k en 90 jours avec un système high-ticket. Tu serais dispo pour un appel de 30 min cette semaine ?",sc:[80,75,60,70],st:'st-h',stxt:'Prospect chaud'},
+    {f:'user',t:"Oui, jeudi ou vendredi ça marche"},
+    {f:'bot',t:"Parfait Thomas. Je te bloque jeudi 14h. Confirmation dans 2 min.",sc:[100,95,80,90],st:'st-r',stxt:'RDV posé',rdv:true,rdvCard:{date:'Jeudi — 14h00',type:'Appel stratégique 30 min',lien:'Lien Calendly envoyé'}}
+   ],
+   qr:[[1,"Je coache des entrepreneurs mais je plafonne à 2k/mois"],[3,"Seul. 3-4 clients à 500€"],[5,"Oui, jeudi ou vendredi"]]},
+
+  // 1 WA froid
+  {name:'Marie Dupont',av:'MD',avcls:'av-wa',ch:'WhatsApp',chcls:'ch-wa',trigger:false,
+   steps:[
+    {f:'bot',t:"Bonjour Marie ! Je suis l'assistant de Jonathan. Tu as liké sa dernière vidéo. Tu travailles dans quel domaine ?",sc:[15,10,5,5],st:'st-q',stxt:'Qualification'},
+    {f:'user',t:"Je suis salariée, je voulais juste m'informer"},
+    {f:'bot',t:"Pas de souci. Tu penses à quoi exactement — lancer ton activité, sortir du salariat ?",sc:[28,15,8,8],st:'st-q',stxt:'Qualification'},
+    {f:'user',t:"Peut-être un jour mais vraiment pas maintenant"},
+    {f:'bot',t:"Je comprends tout à fait Marie. Je t'envoie 3 ressources gratuites de Jonathan : comment valider une idée sans quitter son job. Aucune obligation. Je te recontacte dans 5 jours si tu veux.",sc:[32,18,8,8],st:'st-f',stxt:'Nurturing activé',asset:{title:'Value assets envoyés',rows:['Guide : Valider son idée en 7 jours','Vidéo : Les 3 erreurs du salarié qui lance','Checklist : Avant de quitter ton CDI']}},
+    {f:'sys',t:"Séquence nurturing J+5 planifiée automatiquement — 0 lead perdu"},
+    {f:'user',t:"Merci c'est sympa"},
+    {f:'bot',t:"Avec plaisir Marie. À bientôt.",sc:[34,20,8,8],st:'st-f',stxt:'Séquence J+5'}
+   ],
+   qr:[[1,"Je suis salariée, je voulais m'informer"],[3,"Peut-être un jour mais pas maintenant"],[5,"Merci c'est sympa"]]},
+
+  // 2 WA objection
+  {name:'Karim Ait',av:'KA',avcls:'av-wa',ch:'WhatsApp',chcls:'ch-wa',trigger:false,
+   steps:[
+    {f:'bot',t:"Bonjour Karim ! Je suis l'assistant de Jonathan. Tu as regardé son live hier. Tu vends quoi comme offres ?",sc:[20,20,15,15],st:'st-q',stxt:'Qualification'},
+    {f:'user',t:"Des formations à 97€ mais ça se vend mal"},
+    {f:'bot',t:"Tu es à combien par mois en ce moment ?",sc:[50,50,40,35],st:'st-q',stxt:'Qualification'},
+    {f:'user',t:"Environ 800€, très irrégulier"},
+    {f:'bot',t:"Jonathan a accompagné des profils exactement comme le tien à passer à 3–5k/mois. Son programme est à 1 500€. Ses clients rentabilisent en moins de 60 jours. Tu es dispo pour un appel de 30 min ?",sc:[75,70,55,65],st:'st-h',stxt:'Prospect chaud'},
+    {f:'user',t:"1 500€ c'est vraiment trop cher pour moi"},
+    {f:'bot',t:"Je comprends. Ça représente presque 2 mois de revenus. Mais la vraie question c'est le risque, pas le prix. Si Jonathan garantit que tu dépasses 1 500€ en 60 jours ou remboursement intégral — est-ce que le prix reste un problème ?",sc:[80,65,55,70],st:'st-o',stxt:'Objection en cours'},
+    {f:'user',t:"Hmm comme ça c'est différent..."},
+    {f:'bot',t:"C'est exactement ça. On peut regarder ensemble ce qui bloque vraiment. Un appel de 30 min cette semaine ?",sc:[88,75,65,78],st:'st-h',stxt:'Objection levée'}
+   ],
+   qr:[[1,"Des formations à 97€ mais ça se vend mal"],[3,"Environ 800€, très irrégulier"],[5,"1 500€ c'est vraiment trop cher"],[7,"Hmm comme ça c'est différent..."]]},
+
+  // 3 WA disparaît
+  {name:'Lucas Bernard',av:'LB',avcls:'av-wa',ch:'WhatsApp',chcls:'ch-wa',trigger:false,
+   steps:[
+    {f:'bot',t:"Bonjour Lucas ! Je suis l'assistant de Jonathan. Tu as cliqué sur sa pub. Tu développes quoi comme activité en ce moment ?",sc:[20,10,5,5],st:'st-q',stxt:'Qualification'},
+    {f:'user',t:"Je fais du dropshipping, ça marche pas terrible"},
+    {f:'bot',t:"Tu es à combien par mois et tu cherches quoi exactement — plus de revenus, changer de modèle ?",sc:[45,40,30,25],st:'st-q',stxt:'Qualification'},
+    {f:'sys',t:"Prospect ne répond pas — relance automatique J+1 planifiée"},
+    {f:'sys',t:"J+1 — Relance envoyée : 'Lucas, tu avais mentionné des difficultés avec ton dropshipping. On a aidé 3 personnes dans ta situation ce mois-ci...'"},
+    {f:'sys',t:"J+3 — Relance envoyée avec value asset : Guide gratuit 'Sortir du dropshipping en 90 jours'"},
+    {f:'user',t:"Désolé j'avais oublié de répondre"},
+    {f:'bot',t:"Aucun souci Lucas ! Je disais : tu cherches plus de revenus ou changer complètement de modèle ?",sc:[50,45,30,30],st:'st-q',stxt:'Qualification relancée'}
+   ],
+   qr:[[1,"Je fais du dropshipping, ça marche pas terrible"],[6,"Désolé j'avais oublié de répondre"]]},
+
+  // 4 WA agressif
+  {name:'Anonyme',av:'??',avcls:'av-wa',ch:'WhatsApp',chcls:'ch-wa',trigger:false,
+   steps:[
+    {f:'bot',t:"Bonjour ! Je suis l'assistant de Jonathan. Comment puis-je vous aider aujourd'hui ?",sc:[5,5,5,5],st:'st-q',stxt:'Qualification'},
+    {f:'user',t:"C'est encore un arnaqueur qui vend du vent ? Je veux pas me faire avoir"},
+    {f:'bot',t:"Je comprends la méfiance, elle est saine. Jonathan ne demande pas de faire confiance sans preuve. C'est pour ça qu'il propose un appel gratuit de 30 min avant tout engagement. Vous écoutez, vous posez vos questions, vous décidez. Sans pression.",sc:[15,10,5,5],st:'st-q',stxt:'Désarmement en cours'},
+    {f:'user',t:"Tous les coachs disent ça"},
+    {f:'bot',t:"Vous avez raison, beaucoup le disent. Ce qui distingue Jonathan c'est une garantie contractuelle : si vous n'atteignez pas les objectifs définis ensemble dans les 60 jours, remboursement intégral. Il n'a aucun intérêt à prendre un client qui ne convertit pas.",sc:[30,20,10,15],st:'st-o',stxt:'Objection en cours'},
+    {f:'user',t:"Bon... c'est quoi cet appel exactement ?"},
+    {f:'bot',t:"30 minutes. Jonathan analyse votre situation, vous dit honnêtement si son programme est fait pour vous, et si oui comment ça fonctionne. Si ce n'est pas le bon fit, il vous le dit. Un créneau cette semaine ?",sc:[55,50,30,40],st:'st-h',stxt:'Prospect réchauffé'}
+   ],
+   qr:[[1,"C'est encore un arnaqueur ?"],[3,"Tous les coachs disent ça"],[5,"Bon... c'est quoi cet appel ?"]]},
+
+  // 5 IG commentaire
+  {name:'Sophie Ortega',av:'SO',avcls:'av-ig',ch:'Instagram',chcls:'ch-ig',trigger:true,triggerPill:'Instagram',triggerText:'A commenté : "Incroyable ! Comment tu fais ça concrètement ?"',
+   steps:[
+    {f:'bot',t:"Bonjour Sophie ! J'ai vu ton commentaire sur la vidéo de Jonathan. Belle question. Tu accompagnes des gens toi aussi ou tu cherches à développer ton activité ?",sc:[20,15,10,15],st:'st-q',stxt:'Qualification'},
+    {f:'user',t:"Je suis coach bien-être, j'ai du mal à vendre mes accompagnements"},
+    {f:'bot',t:"Tu proposes quoi comme offres et tu es à combien par mois environ ?",sc:[50,50,35,40],st:'st-q',stxt:'Qualification'},
+    {f:'user',t:"Des séances à 60€, j'arrive à 1 200€/mois max"},
+    {f:'bot',t:"Jonathan a une méthode pour transformer exactement ce type d'offre en high-ticket à 1 000€+. Il a aidé 4 coachs bien-être ce trimestre à franchir les 5k/mois. Tu es dispo pour un appel de 30 min ?",sc:[82,80,60,75],st:'st-h',stxt:'Prospect chaud'},
+    {f:'user',t:"Oui avec plaisir !"},
+    {f:'bot',t:"Super Sophie. Je te bloque mercredi 10h.",sc:[100,95,80,90],st:'st-r',stxt:'RDV posé',rdv:true,rdvCard:{date:'Mercredi — 10h00',type:'Appel découverte 30 min',lien:'Lien Calendly envoyé via Instagram DM'}}
+   ],
+   qr:[[1,"Je suis coach bien-être, j'ai du mal à vendre"],[3,"Des séances à 60€, 1 200€/mois max"],[5,"Oui avec plaisir !"]]},
+
+  // 6 IG concurrent
+  {name:'Pierre Lefort',av:'PL',avcls:'av-ig',ch:'Instagram',chcls:'ch-ig',trigger:true,triggerPill:'Instagram',triggerText:'A liké 3 publications consécutives',
+   steps:[
+    {f:'bot',t:"Bonjour Pierre ! J'ai vu que tu suivais Jonathan depuis un moment. Tu travailles dans la vente ou l'accompagnement ?",sc:[15,15,10,10],st:'st-q',stxt:'Qualification'},
+    {f:'user',t:"Oui je suis déjà avec un autre coach depuis 2 mois"},
+    {f:'bot',t:"C'est bien d'être accompagné. Tu en es où après 2 mois — tu vois des résultats concrets ?",sc:[30,30,25,20],st:'st-q',stxt:'Exploration'},
+    {f:'user',t:"Honnêtement pas vraiment, c'est beaucoup de théorie"},
+    {f:'bot',t:"Je comprends cette frustration. La méthode de Jonathan est 100% orientée résultats mesurables dès les 3 premières semaines. Pas de théorie — des actions concrètes avec des jalons chiffrés. Ce serait intéressant pour toi de comparer les deux approches sur un appel de 30 min ?",sc:[65,60,50,55],st:'st-h',stxt:'Prospect réchauffé'},
+    {f:'user',t:"Pourquoi pas, je suis ouvert"},
+    {f:'bot',t:"Parfait Pierre. Je te réserve un créneau cette semaine.",sc:[85,80,65,70],st:'st-h',stxt:'Prospect chaud',rdv:true,rdvCard:{date:'Jeudi — 11h00',type:'Appel comparatif 30 min',lien:'Lien Calendly envoyé'}}
+   ],
+   qr:[[1,"Oui je suis déjà avec un autre coach"],[3,"Honnêtement pas vraiment, c'est théorique"],[5,"Pourquoi pas, je suis ouvert"]]},
+
+  // 7 LinkedIn
+  {name:'David Renard',av:'DR',avcls:'av-li',ch:'LinkedIn',chcls:'ch-li',trigger:true,triggerPill:'LinkedIn',triggerText:'A consulté le profil de Jonathan (3e fois cette semaine)',
+   steps:[
+    {f:'bot',t:"Bonjour David, j'ai remarqué que tu t'intéressais au profil de Jonathan. Je suis son assistant. Tu cherches à développer quoi comme activité en ce moment ?",sc:[20,20,15,15],st:'st-q',stxt:'Qualification'},
+    {f:'user',t:"Je suis CEO d'une startup SaaS, on cherche à mieux convertir nos leads"},
+    {f:'bot',t:"Intéressant. Tu parles de leads entrants, sortants, ou les deux ? Et tu es à quel volume par mois ?",sc:[55,55,50,45],st:'st-q',stxt:'Qualification'},
+    {f:'user',t:"Surtout entrants, environ 200/mois mais on convertit à 3%"},
+    {f:'bot',t:"3% sur 200 leads c'est 6 clients. Jonathan a aidé des SaaS à passer à 12–15% de conversion en implémentant un système de qualification automatisé. Sur 200 leads ça fait 24–30 clients. L'appel de 30 min vaut le coup non ?",sc:[88,85,80,82],st:'st-h',stxt:'Prospect très chaud'},
+    {f:'user',t:"Oui clairement, quand ?"},
+    {f:'bot',t:"Je te bloque demain à 9h. Je t'envoie la confirmation sur LinkedIn.",sc:[100,95,90,95],st:'st-r',stxt:'RDV posé',rdv:true,rdvCard:{date:'Demain — 9h00',type:'Appel stratégique 30 min',lien:'Lien Calendly envoyé via LinkedIn'}}
+   ],
+   qr:[[1,"CEO startup SaaS, problème de conversion leads"],[3,"Entrants, 200/mois, conversion 3%"],[5,"Oui clairement, quand ?"]]}
+];
+
+function addLog(ev,cls=''){
+  logs.push({t:T(),ev,cls});
+  const el=document.getElementById('logPanel');
+  if(el)el.innerHTML=logs.slice(-8).reverse().map(l=>`<div class="logline"><span class="logt">${l.t}</span><span class="logev ${l.cls}">${l.ev}</span></div>`).join('');
+}
+
+function upScore(sc,st,stxt){
+  if(!sc)return;
+  const keys=['Q','S','B','U'];
+  keys.forEach((k,i)=>{
+    document.getElementById('b'+k).style.width=sc[i]+'%';
+    document.getElementById('v'+k).textContent=sc[i]+'%';
+  });
+  if(st){const p=document.getElementById('stageTag');p.className='stage '+st;p.textContent=stxt;}
+}
+
+function addBubble(from,text,extra){
+  const cb=document.getElementById('chatBody');
+  const time=new Date().toTimeString().slice(0,5);
+  const d=document.createElement('div');
+  d.className='bubble '+from;
+  let inner='';
+  if(extra&&extra.whisper)inner+=`<div class="btag btag-w">&#9679; Transcription Whisper</div>`;
+  if(extra&&extra.tts)inner+=`<div class="btag btag-tts">&#9679; Voice note ElevenLabs</div>`;
+  inner+=text.replace(/\n/g,'<br>');
+  if(extra&&extra.rdvCard){const r=extra.rdvCard;inner+=`<div class="rdv-card"><div class="rdv-ttl">RDV confirmé</div><div class="rdv-row">— ${r.date}</div><div class="rdv-row">— ${r.type}</div><div class="rdv-row">— ${r.lien}</div></div>`;}
+  if(extra&&extra.asset){const a=extra.asset;inner+=`<div class="asset-card"><div class="asset-ttl">${a.title}</div>${a.rows.map(r=>`<div class="asset-row">— ${r}</div>`).join('')}</div>`;}
+  inner+=`<div class="btime">${time}</div>`;
+  d.innerHTML=inner;
+  cb.appendChild(d);
+  cb.scrollTop=cb.scrollHeight;
+}
+
+function addAudioBub(from,dur){
+  const cb=document.getElementById('chatBody');
+  const time=new Date().toTimeString().slice(0,5);
+  const d=document.createElement('div');
+  d.className='bubble audio-bub '+from;
+  d.innerHTML=`<div class="play-ico">&#9658;</div><div class="wave"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div><span class="adur">${dur}</span><div class="btime" style="position:absolute;bottom:4px;right:11px">${time}</div>`;
+  d.style.minWidth='155px';
+  cb.appendChild(d);
+  cb.scrollTop=cb.scrollHeight;
+}
+
+function showTyping(){
+  const cb=document.getElementById('chatBody');
+  const d=document.createElement('div');
+  d.className='bubble bot';d.id='tyb';
+  d.innerHTML='<div class="typing"><span></span><span></span><span></span></div>';
+  cb.appendChild(d);cb.scrollTop=cb.scrollHeight;
+}
+function killTyping(){const e=document.getElementById('tyb');if(e)e.remove();}
+
+function renderQR(){
+  const qr=document.getElementById('qrArea');qr.innerHTML='';
+  const sc=SC[curSc];
+  sc.qr.forEach(([tgt,lbl])=>{
+    if(tgt===step){
+      const b=document.createElement('button');b.className='qr';
+      b.textContent=lbl.length>42?lbl.slice(0,42)+'…':lbl;
+      b.onclick=()=>{document.getElementById('userInp').value=lbl;sendUser();};
+      qr.appendChild(b);
+    }
+  });
+}
+
+function nextBot(){
+  const sc=SC[curSc];
+  if(step>=sc.steps.length)return;
+  const cur=sc.steps[step];
+  if(cur.f==='sys'){
+    setTimeout(()=>{addBubble('sys',cur.t,{});if(cur.sc)upScore(cur.sc,cur.st,cur.stxt);addLog('Action système: '+cur.t.slice(0,40),'la');step++;renderQR();setTimeout(nextBot,600);},400);
+    return;
+  }
+  if(cur.f!=='bot')return;
+  showTyping();
+  document.getElementById('chatStatus').textContent='En train d\'écrire...';
+  setTimeout(()=>{
+    killTyping();
+    document.getElementById('chatStatus').textContent='En ligne';
+    const extra={};
+    if(cur.tts)extra.tts=true;
+    if(cur.rdvCard)extra.rdvCard=cur.rdvCard;
+    if(cur.asset)extra.asset=cur.asset;
+    addBubble('bot',cur.t,extra);
+    if(cur.sc)upScore(cur.sc,cur.st,cur.stxt);
+    if(cur.rdv){
+      rdv++;leads=Math.max(leads,1);
+      document.getElementById('stRdv').textContent=rdv;
+      document.getElementById('stLeads').textContent=leads;
+      document.getElementById('stRate').textContent='Taux '+Math.round(rdv/leads*100)+'%';
+      addLog('RDV posé dans Calendly','lp');
+      addLog('Notification → Jonathan','lg');
+      document.getElementById('dynLead').style.display='flex';
+      document.getElementById('dynTag').textContent='RDV';
+      document.getElementById('dynTag').style.background='var(--green-l)';
+      document.getElementById('dynTag').style.color='var(--green)';
+    }
+    addLog('Message bot (étape '+(step+1)+')','lb');
+    step++;renderQR();
+  },1000+Math.random()*600);
+}
+
+function sendUser(){
+  const inp=document.getElementById('userInp');
+  const val=inp.value.trim();if(!val)return;
+  inp.value='';document.getElementById('qrArea').innerHTML='';
+  addBubble('user',val,{});
+  addLog('Prospect a répondu');
+  leads=Math.max(leads,1);document.getElementById('stLeads').textContent=leads;
+  document.getElementById('dynLead').style.display='flex';
+  document.getElementById('dynAv').textContent=SC[curSc].av;
+  document.getElementById('dynName').textContent=SC[curSc].name;
+  const cur=SC[curSc].steps[step];
+  if(cur&&cur.f==='user'){if(cur.sc)upScore(cur.sc,cur.st,cur.stxt);step++;}
+  setTimeout(nextBot,300);
+}
+
+function sendAudio(){
+  const vsteps=[
+    {t:'Réception de l\'audio…',cls:'active'},
+    {t:'Envoi à Whisper (OpenAI)…',cls:'active'},
+    {t:'Transcription en cours…',cls:'active'},
+    {t:'Texte extrait → agent setter',cls:'active'}
+  ];
+  document.getElementById('voiceModal').classList.add('show');
+  document.getElementById('modalProg').textContent='';
+  document.getElementById('modalSteps').innerHTML=vsteps.map((s,i)=>`<div class="mstep" id="ms${i}"><div class="mstep-dot"></div>${s.t}</div>`).join('');
+  let i=0;
+  const iv=setInterval(()=>{
+    if(i>0)document.getElementById('ms'+(i-1)).className='mstep done';
+    if(i<vsteps.length){document.getElementById('ms'+i).className='mstep active';i++;}
+    else{
+      clearInterval(iv);
+      setTimeout(()=>{
+        document.getElementById('voiceModal').classList.remove('show');
+        addAudioBub('user','0:09');
+        addLog('Audio reçu — Whisper OK','lg');
+        addLog('Transcription transmise à l\'agent');
+        document.getElementById('qrArea').innerHTML='';
+        const cur=SC[curSc].steps[step];
+        if(cur&&cur.f==='user'){if(cur.sc)upScore(cur.sc,cur.st,cur.stxt);step++;}
+        setTimeout(()=>{
+          showTyping();
+          setTimeout(()=>{
+            killTyping();
+            addAudioBub('bot','0:11');
+            addLog('TTS ElevenLabs généré','lp');
+            addLog('Voice note envoyée (voix Jonathan)','lg');
+            step++;renderQR();
+          },1300);
+        },300);
+      },400);
+    }
+  },650);
+}
+
+function closeModal(){document.getElementById('voiceModal').classList.remove('show');}
+
+function loadSc(n){
+  curSc=n;step=0;logs=[];
+  document.getElementById('chatBody').innerHTML='';
+  document.getElementById('qrArea').innerHTML='';
+  document.getElementById('logPanel').innerHTML='';
+  upScore([0,0,0,0],'st-w','En attente');
+  document.querySelectorAll('.sc-btn').forEach((b,i)=>{b.classList.toggle('active',i===n);});
+  const sc=SC[n];
+  document.getElementById('chatName').textContent=sc.name;
+  document.getElementById('chatAv').textContent=sc.av;
+  document.getElementById('chatAv').className='av '+sc.avcls;
+  document.getElementById('chatChannel').textContent=sc.ch;
+  document.getElementById('chatChannel').className='hdr-channel '+sc.chcls;
+  document.getElementById('chatStatus').textContent='En ligne';
+  const tb=document.getElementById('triggerBar');
+  if(sc.trigger){
+    tb.classList.add('show');
+    document.getElementById('triggerPill').textContent=sc.triggerPill;
+    document.getElementById('triggerText').textContent=sc.triggerText;
+  } else tb.classList.remove('show');
+  document.getElementById('dynLead').style.display='none';
+  addLog('Scénario chargé : '+sc.name,'lg');
+  addLog('Canal : '+sc.ch);
+  setTimeout(nextBot,500);
+}
+
+function showTab(t){
+  document.getElementById('tab-demo').style.display=t==='demo'?'grid':'none';
+  document.getElementById('tab-arch').style.display=t==='arch'?'block':'none';
+  document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('active',i===(t==='demo'?0:1)));
+}
+
+function showRTab(n){
+  rTab=n;
+  [0,1,2].forEach(i=>{
+    document.getElementById('rp'+i).style.display=i===n?'block':'none';
+    document.getElementById('rt'+i).classList.toggle('active',i===n);
+  });
+}
+
+loadSc(0);
+</script>
+</body>
+</html>
